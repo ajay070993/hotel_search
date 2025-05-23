@@ -64,11 +64,19 @@ def search():
         children_ages = [int(age) for age in data['childrenAges'] if age is not None and age != '']
         logger.debug(f"Children Ages: {children_ages}")
 
-    # Validate required parameters
-    if not city or not check_in or not check_out:
+    # Validate required parameters - either city or hotel_name must be provided
+    if not city and not hotel_name:
         error_response = {
             'error': True,
-            'message': 'Missing required parameters: city, checkIn, and checkOut are required'
+            'message': 'Either city or hotel name must be provided'
+        }
+        logger.error(f"Validation Error: {error_response}")
+        return jsonify(error_response), 400
+
+    if not check_in or not check_out:
+        error_response = {
+            'error': True,
+            'message': 'Check-in and check-out dates are required'
         }
         logger.error(f"Validation Error: {error_response}")
         return jsonify(error_response), 400
@@ -77,6 +85,16 @@ def search():
     logger.debug("Fetching hotels from database...")
     hotels = get_hotels_structured(city, hotel_name, check_in, check_out)
     logger.debug(f"Found {len(hotels)} hotels")
+
+    if not hotels:
+        response = {
+            'error': False,
+            'data': {
+                'results': [],
+                'message': 'No hotels found matching your criteria'
+            }
+        }
+        return jsonify(response)
 
     # Calculate minimum rooms needed
     max_adults_per_room = 0

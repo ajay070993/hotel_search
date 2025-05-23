@@ -501,7 +501,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
         
         params = {}
         
-        # Add filters
+        # Add filters - make city and hotel_name optional
         if city_id:
             query += " AND dhl.city_id = :city_id"
             params['city_id'] = city_id
