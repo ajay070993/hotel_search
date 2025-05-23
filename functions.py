@@ -331,13 +331,32 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 'check_in': check_in,
                 'check_out': check_out,
                 'nights': len(dates),
-                'rooms_required': rooms_required,
+                'rooms_required': rooms_required,  # Initial value
                 'adults': adults,
                 'children_ages': children_ages,
                 'custom_room_message': '',
                 'rooms': []
             }
             print("Created new hotel group")
+
+        # Calculate minimum rooms needed across all room types
+        min_rooms_needed = float('inf')
+        for room in hotel['rooms']:
+            max_adults = room['max_adults']
+            max_children = room['max_children']
+            max_occupancy = room['max_occupancy']
+            
+            # Calculate minimum rooms needed for this room type
+            min_rooms_for_adults = (adults + max_adults - 1) // max_adults if max_adults > 0 else 1
+            min_rooms_for_children = (len(children_ages) + max_children - 1) // max_children if max_children > 0 else 1
+            min_rooms_for_occupancy = ((adults + len(children_ages)) + max_occupancy - 1) // max_occupancy if max_occupancy > 0 else 1
+            
+            room_min_rooms = max(min_rooms_for_adults, min_rooms_for_children, min_rooms_for_occupancy)
+            min_rooms_needed = min(min_rooms_needed, room_min_rooms)
+
+        # Update rooms_required with the minimum needed across all room types
+        if min_rooms_needed != float('inf'):
+            grouped_hotels[hotel_key]['rooms_required'] = max(rooms_required, min_rooms_needed)
 
         # Process each room type
         print("\nProcessing room types:")
@@ -426,7 +445,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                     actual_rooms, meal_plan
                 )
                 
-                if allocation_result['price'] is not None:
+                if not allocation_result['error']:
                     print(f"Valid allocation found for {meal_plan}")
                     meal_plan_results[meal_plan] = allocation_result
                 else:
@@ -437,7 +456,8 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 grouped_hotels[hotel_key]['rooms'].append({
                     'room_type': room['room_type'],
                     'room_name': room['room_name'],
-                    'meal_plans': meal_plan_results
+                    'meal_plans': meal_plan_results,
+                    'allocation': meal_plan_results[list(meal_plan_results.keys())[0]]['allocation']
                 })
             else:
                 print("No valid meal plans found for room")
