@@ -94,7 +94,7 @@ def search():
     logger.debug(f"Max Children per Room: {max_children_per_room}")
     logger.debug(f"Max Occupancy per Room: {max_occupancy_per_room}")
 
-    # Calculate minimum rooms needed for each constraint
+    # Calculate minimum rooms needed
     min_rooms_for_adults = (adults + max_adults_per_room - 1) // max_adults_per_room if max_adults_per_room > 0 else 1
     min_rooms_for_children = (len(children_ages) + max_children_per_room - 1) // max_children_per_room if max_children_per_room > 0 else 1
     min_rooms_for_occupancy = ((adults + len(children_ages)) + max_occupancy_per_room - 1) // max_occupancy_per_room if max_occupancy_per_room > 0 else 1
@@ -103,12 +103,13 @@ def search():
     min_rooms_needed = max(min_rooms_for_adults, min_rooms_for_children, min_rooms_for_occupancy)
     logger.debug(f"Minimum Rooms Needed: {min_rooms_needed}")
 
-    # Determine rooms to allocate
+    # Determine rooms to allocate - respect user's room request if it's valid
     if rooms < min_rooms_needed:
         rooms_to_allocate = min_rooms_needed
         auto_room_message = f"To accommodate {adults} adults" + (f" and {len(children_ages)} children" if children_ages else "") + f", you need at least {min_rooms_needed} rooms."
     else:
-        rooms_to_allocate = rooms
+        # Use the user's requested number of rooms, but ensure it's not less than minimum needed
+        rooms_to_allocate = max(rooms, min_rooms_needed)
         auto_room_message = ''
 
     logger.debug(f"Rooms to Allocate: {rooms_to_allocate}")

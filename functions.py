@@ -131,6 +131,12 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
     child_splits = [[0]] if not children_ages else split_guests(len(children_ages), num_rooms, max_children)
     print(f"Child splits: {child_splits}")
 
+    # Calculate total guests
+    total_guests = adults + len(children_ages)
+    guests_per_room = total_guests / num_rooms
+    print(f"\nTotal guests: {total_guests}")
+    print(f"Average guests per room: {guests_per_room}")
+
     for adults_per_room in adult_splits:
         for children_per_room in child_splits:
             print(f"\nTrying allocation:")
@@ -160,11 +166,22 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
                 print(f"\nRoom {i+1}:")
                 print(f"Adults: {a}, Children ages: {c_ages}")
 
-                # Validate room occupancy
-                if a < 1 or a + c > max_occupancy or a > max_adults or c > max_children:
-                    print("Invalid room occupancy")
+                # Validate room occupancy - allow if total guests per room is within limits
+                if a < 1 or a > max_adults or c > max_children:
+                    print("Invalid room occupancy - exceeds max adults or children")
                     valid = False
                     break
+
+                # Check if total occupancy is within limits
+                if a + c > max_occupancy:
+                    print(f"Room {i+1} exceeds max occupancy: {a + c} > {max_occupancy}")
+                    # If this is the last room and we have more guests than can fit, it's invalid
+                    if i == num_rooms - 1 and sum(adults_per_room) + sum(len(c) for c in children_ages_rooms) > max_occupancy * num_rooms:
+                        print("Total guests exceed total room capacity")
+                        valid = False
+                        break
+                    # Otherwise, try to redistribute guests
+                    continue
 
                 room_price = 0
                 daily_prices = []
@@ -343,7 +360,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 'check_in': check_in,
                 'check_out': check_out,
                 'nights': len(dates),
-                'rooms_required': min_rooms_needed,
+                'rooms_required': rooms_required,
                 'adults': adults,
                 'children_ages': children_ages,
                 'custom_room_message': custom_room_message,
@@ -400,7 +417,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 print(f"\nTrying meal plan: {meal_plan}")
                 allocation_result = allocate_rooms_and_calculate_price(
                     room, adults, children_ages, check_in, check_out, 
-                    min_rooms_needed, meal_plan
+                    rooms_required, meal_plan
                 )
                 
                 if allocation_result['price'] is not None:
