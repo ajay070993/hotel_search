@@ -108,6 +108,7 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
     if adults < num_rooms:
         print("\nNot enough adults for rooms")
         return {
+            'error': True,
             'price': None,
             'allocation': None
         }
@@ -119,6 +120,7 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
         if date_obj not in pricing:
             print(f"\nNo pricing for date: {date_obj}")
             return {
+                'error': True,
                 'price': None,
                 'allocation': None
             }
@@ -175,13 +177,8 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
                 # Check if total occupancy is within limits
                 if a + c > max_occupancy:
                     print(f"Room {i+1} exceeds max occupancy: {a + c} > {max_occupancy}")
-                    # If this is the last room and we have more guests than can fit, it's invalid
-                    if i == num_rooms - 1 and sum(adults_per_room) + sum(len(c) for c in children_ages_rooms) > max_occupancy * num_rooms:
-                        print("Total guests exceed total room capacity")
-                        valid = False
-                        break
-                    # Otherwise, try to redistribute guests
-                    continue
+                    valid = False
+                    break
 
                 room_price = 0
                 daily_prices = []
@@ -261,14 +258,18 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
                 })
                 total_price += room_price
 
-            if valid and (best_price is None or total_price < best_price):
-                print(f"\nNew best price found: {total_price}")
+            if valid:
+                print(f"\nValid allocation found with price: {total_price}")
                 best_price = total_price
                 best_allocation = allocation
+                # For multiple rooms, we don't need to find the cheapest option
+                if num_rooms > 1:
+                    break
 
     print("\n=== Finished allocate_rooms_and_calculate_price ===")
     print(f"Best price: {best_price}")
     return {
+        'error': best_price is None,
         'price': best_price,
         'allocation': best_allocation
     }
@@ -315,47 +316,6 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
 
         print("Hotel passed initial filters")
         
-        # Calculate min rooms needed for this hotel
-        max_adults_per_room = 0
-        max_children_per_room = 0
-        max_occupancy_per_room = 0
-        
-        print("\nCalculating room requirements:")
-        for room in hotel['rooms']:
-            print(f"\nRoom: {room.get('room_name', 'Unknown')}")
-            print(f"Max adults: {room.get('max_adults', 0)}")
-            print(f"Max children: {room.get('max_children', 0)}")
-            print(f"Max occupancy: {room.get('max_occupancy', 0)}")
-            
-            max_adults_per_room = max(max_adults_per_room, room['max_adults'])
-            max_children_per_room = max(max_children_per_room, room['max_children'])
-            max_occupancy_per_room = max(max_occupancy_per_room, room['max_occupancy'])
-
-        # Calculate minimum rooms needed
-        min_rooms_for_adults = (adults + max_adults_per_room - 1) // max_adults_per_room if max_adults_per_room > 0 else 1
-        min_rooms_for_children = (len(children_ages) + max_children_per_room - 1) // max_children_per_room if max_children_per_room > 0 else 1
-        min_rooms_for_occupancy = ((adults + len(children_ages)) + max_occupancy_per_room - 1) // max_occupancy_per_room if max_occupancy_per_room > 0 else 1
-        
-        print("\nMinimum rooms calculation:")
-        print(f"Min rooms for adults: {min_rooms_for_adults}")
-        print(f"Min rooms for children: {min_rooms_for_children}")
-        print(f"Min rooms for occupancy: {min_rooms_for_occupancy}")
-        
-        min_rooms_needed = max(min_rooms_for_adults, min_rooms_for_children, min_rooms_for_occupancy)
-        print(f"Final minimum rooms needed: {min_rooms_needed}")
-
-        # Determine actual rooms to use
-        actual_rooms = max(rooms_required, min_rooms_needed)
-        print(f"Actual rooms to use: {actual_rooms}")
-
-        # Create custom room message if needed
-        custom_room_message = ''
-        if rooms_required < min_rooms_needed:
-            custom_room_message = f"To accommodate {adults} adult{'s' if adults > 1 else ''}" + \
-                                (f" and {len(children_ages)} child{'ren' if len(children_ages) > 1 else ''}" if children_ages else "") + \
-                                f", you need at least {min_rooms_needed} rooms at {hotel['hotel_name']}."
-            print(f"\nCustom room message: {custom_room_message}")
-
         # Group hotels by hotel_id
         hotel_key = hotel['hotel_id']
         print(f"\nGrouping hotel with key: {hotel_key}")
@@ -371,10 +331,10 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 'check_in': check_in,
                 'check_out': check_out,
                 'nights': len(dates),
-                'rooms_required': actual_rooms,  # Use actual_rooms instead of min_rooms_needed
+                'rooms_required': rooms_required,
                 'adults': adults,
                 'children_ages': children_ages,
-                'custom_room_message': custom_room_message,
+                'custom_room_message': '',
                 'rooms': []
             }
             print("Created new hotel group")
@@ -383,6 +343,41 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
         print("\nProcessing room types:")
         for room in hotel['rooms']:
             print(f"\nRoom type: {room.get('room_name', 'Unknown')}")
+            
+            # Calculate min rooms needed for this specific room type
+            max_adults = room['max_adults']
+            max_children = room['max_children']
+            max_occupancy = room['max_occupancy']
+            
+            print(f"\nRoom limits:")
+            print(f"Max adults: {max_adults}")
+            print(f"Max children: {max_children}")
+            print(f"Max occupancy: {max_occupancy}")
+            
+            # Calculate minimum rooms needed for this room type
+            min_rooms_for_adults = (adults + max_adults - 1) // max_adults if max_adults > 0 else 1
+            min_rooms_for_children = (len(children_ages) + max_children - 1) // max_children if max_children > 0 else 1
+            min_rooms_for_occupancy = ((adults + len(children_ages)) + max_occupancy - 1) // max_occupancy if max_occupancy > 0 else 1
+            
+            print("\nMinimum rooms calculation for this room type:")
+            print(f"Min rooms for adults: {min_rooms_for_adults}")
+            print(f"Min rooms for children: {min_rooms_for_children}")
+            print(f"Min rooms for occupancy: {min_rooms_for_occupancy}")
+            
+            min_rooms_needed = max(min_rooms_for_adults, min_rooms_for_children, min_rooms_for_occupancy)
+            print(f"Final minimum rooms needed for this room type: {min_rooms_needed}")
+
+            # Determine actual rooms to use for this room type
+            actual_rooms = max(rooms_required, min_rooms_needed)
+            print(f"Actual rooms to use for this room type: {actual_rooms}")
+
+            # Create custom room message if needed
+            if rooms_required < min_rooms_needed:
+                custom_room_message = f"To accommodate {adults} adult{'s' if adults > 1 else ''}" + \
+                                    (f" and {len(children_ages)} child{'ren' if len(children_ages) > 1 else ''}" if children_ages else "") + \
+                                    f", you need at least {min_rooms_needed} rooms of type {room['room_name']} at {hotel['hotel_name']}."
+                print(f"\nCustom room message: {custom_room_message}")
+                grouped_hotels[hotel_key]['custom_room_message'] = custom_room_message
             
             # Check if room has pricing for all required dates
             has_all_dates = True
@@ -426,7 +421,6 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
             print("\nProcessing meal plans:")
             for meal_plan_id, meal_plan in MEAL_PLAN_MAP.items():
                 print(f"\nTrying meal plan: {meal_plan}")
-                # Use actual_rooms instead of rooms_required
                 allocation_result = allocate_rooms_and_calculate_price(
                     room, adults, children_ages, check_in, check_out, 
                     actual_rooms, meal_plan
