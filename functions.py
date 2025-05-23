@@ -294,6 +294,10 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
     date_objects = [datetime.strptime(date, '%Y-%m-%d').date() for date in dates]
     grouped_hotels = {}
     
+    # Calculate total guests
+    total_guests = adults + len(children_ages)
+    print(f"\nTotal guests: {total_guests}")
+    
     for hotel in hotels:
         print(f"\nProcessing hotel: {hotel.get('hotel_name', 'Unknown')}")
         print(f"Hotel ID: {hotel.get('hotel_id', 'Unknown')}")
@@ -340,6 +344,10 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
         min_rooms_needed = max(min_rooms_for_adults, min_rooms_for_children, min_rooms_for_occupancy)
         print(f"Final minimum rooms needed: {min_rooms_needed}")
 
+        # Determine actual rooms to use
+        actual_rooms = max(rooms_required, min_rooms_needed)
+        print(f"Actual rooms to use: {actual_rooms}")
+
         # Create custom room message if needed
         custom_room_message = ''
         if rooms_required < min_rooms_needed:
@@ -363,7 +371,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 'check_in': check_in,
                 'check_out': check_out,
                 'nights': len(dates),
-                'rooms_required': rooms_required,
+                'rooms_required': actual_rooms,  # Use actual_rooms instead of min_rooms_needed
                 'adults': adults,
                 'children_ages': children_ages,
                 'custom_room_message': custom_room_message,
@@ -418,9 +426,10 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
             print("\nProcessing meal plans:")
             for meal_plan_id, meal_plan in MEAL_PLAN_MAP.items():
                 print(f"\nTrying meal plan: {meal_plan}")
+                # Use actual_rooms instead of rooms_required
                 allocation_result = allocate_rooms_and_calculate_price(
                     room, adults, children_ages, check_in, check_out, 
-                    rooms_required, meal_plan
+                    actual_rooms, meal_plan
                 )
                 
                 if allocation_result['price'] is not None:
