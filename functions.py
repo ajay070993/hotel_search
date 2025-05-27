@@ -75,6 +75,10 @@ def generate_distributions(n: int, k: int, m: int, min_per_room: int,
             results
         )
 
+def most_balanced_split(splits):
+    # Sort by (max-min, then lexicographically)
+    return sorted(splits, key=lambda x: (max(x)-min(x), x))[0] if splits else []
+
 def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int, 
                                      children_ages: List[int], check_in: str, 
                                      check_out: str, num_rooms: int, 
@@ -128,10 +132,14 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
     # Get all possible ways to split adults into rooms
     adult_splits = split_guests(adults, num_rooms, max_adults)
     print(f"\nAdult splits: {adult_splits}")
+    adults_per_room = most_balanced_split(adult_splits)
+    print(f"Most balanced adults per room: {adults_per_room}")
     
     # Get all possible ways to split children into rooms
     child_splits = [[0]] if not children_ages else split_guests(len(children_ages), num_rooms, max_children)
     print(f"Child splits: {child_splits}")
+    children_per_room = most_balanced_split(child_splits)
+    print(f"Most balanced children per room: {children_per_room}")
 
     # Calculate total guests
     total_guests = adults + len(children_ages)
@@ -139,132 +147,125 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
     print(f"\nTotal guests: {total_guests}")
     print(f"Average guests per room: {guests_per_room}")
 
-    for adults_per_room in adult_splits:
-        for children_per_room in child_splits:
-            print(f"\nTrying allocation:")
-            print(f"Adults per room: {adults_per_room}")
-            print(f"Children per room: {children_per_room}")
-            
-            children_ages_copy = children_ages.copy()
-            children_ages_rooms = []
-            
-            # If no children, create empty arrays for each room
-            if not children_ages:
-                children_ages_rooms = [[] for _ in range(num_rooms)]
+    children_ages_copy = children_ages.copy()
+    children_ages_rooms = []
+    # If no children, create empty arrays for each room
+    if not children_ages:
+        children_ages_rooms = [[] for _ in range(num_rooms)]
+    else:
+        for num_children in children_per_room:
+            children_ages_rooms.append(children_ages_copy[:num_children])
+            children_ages_copy = children_ages_copy[num_children:]
+
+    valid = True
+    total_price = 0
+    allocation = []
+
+    for i in range(num_rooms):
+        a = adults_per_room[i]
+        c_ages = children_ages_rooms[i]
+        c = len(c_ages)
+
+        print(f"\nRoom {i+1}:")
+        print(f"Adults: {a}, Children ages: {c_ages}")
+
+        # Validate room occupancy - allow if total guests per room is within limits
+        if a < 1 or a > max_adults or c > max_children:
+            print("Invalid room occupancy - exceeds max adults or children")
+            valid = False
+            break
+
+        # Check if total occupancy is within limits
+        if a + c > max_occupancy:
+            print(f"Room {i+1} exceeds max occupancy: {a + c} > {max_occupancy}")
+            valid = False
+            break
+
+        room_price = 0
+        daily_prices = []
+
+        for date_obj in date_objects:
+            print(f"\nDate: {date_obj}")
+            date_pricing = pricing[date_obj]
+            base_price = 0
+
+            # Calculate base price based on number of adults
+            if a == 1:
+                base_price = date_pricing['1A'][meal_plan]
+                print(f"Single adult price: {base_price}")
+            elif a == 2:
+                base_price = date_pricing['2A'][meal_plan]
+                print(f"Double adult price: {base_price}")
             else:
-                for num_children in children_per_room:
-                    children_ages_rooms.append(children_ages_copy[:num_children])
-                    children_ages_copy = children_ages_copy[num_children:]
+                # For more than 2 adults, use 2A price as base and add extra adult price
+                base_price = date_pricing['2A'][meal_plan]
+                extra_adults = a - 2
+                extra_price = extra_adults * date_pricing['EA'][meal_plan]
+                base_price += extra_price
+                print(f"Double adult base: {date_pricing['2A'][meal_plan]}")
+                print(f"Extra adults ({extra_adults}) price: {extra_price}")
+                print(f"Total base price: {base_price}")
 
-            valid = True
-            total_price = 0
-            allocation = []
+            # Calculate children price
+            paid_children = 0
+            free_children = 0
+            for age in c_ages:
+                if age > free_child_age:
+                    paid_children += 1
+                else:
+                    free_children += 1
 
-            for i in range(num_rooms):
-                a = adults_per_room[i]
-                c_ages = children_ages_rooms[i]
-                c = len(c_ages)
+            print(f"Paid children: {paid_children}, Free children: {free_children}")
 
-                print(f"\nRoom {i+1}:")
-                print(f"Adults: {a}, Children ages: {c_ages}")
+            if paid_children > max_children:
+                print("Too many paid children")
+                valid = False
+                break
 
-                # Validate room occupancy - allow if total guests per room is within limits
-                if a < 1 or a > max_adults or c > max_children:
-                    print("Invalid room occupancy - exceeds max adults or children")
-                    valid = False
-                    break
+            # Add price for paid children
+            children_price = paid_children * date_pricing['EC'][meal_plan]
+            print(f"Children price: {children_price}")
+            
+            # Calculate total price for this day
+            daily_price = base_price + children_price
+            print(f"Daily total: {daily_price}")
+            
+            # Add to room total
+            room_price += daily_price
 
-                # Check if total occupancy is within limits
-                if a + c > max_occupancy:
-                    print(f"Room {i+1} exceeds max occupancy: {a + c} > {max_occupancy}")
-                    valid = False
-                    break
+            daily_prices.append({
+                'date': date_obj.strftime('%Y-%m-%d'),  # Convert back to string for JSON
+                'base_price': base_price,
+                'children_price': children_price,
+                'total': daily_price,
+                'adults': a,
+                'paid_children': paid_children,
+                'free_children': free_children
+            })
 
-                room_price = 0
-                daily_prices = []
+        if not valid:
+            break
 
-                for date_obj in date_objects:
-                    print(f"\nDate: {date_obj}")
-                    date_pricing = pricing[date_obj]
-                    base_price = 0
+        print(f"\nRoom {i+1} total price: {room_price}")
+        allocation.append({
+            'adults': a,
+            'children': c_ages,
+            'paid_children': paid_children,
+            'free_children': free_children,
+            'room_price': room_price,
+            'daily_prices': daily_prices,
+            'nights': len(dates),
+            'price_per_night': room_price / len(dates)
+        })
+        total_price += room_price
 
-                    # Calculate base price based on number of adults
-                    if a == 1:
-                        base_price = date_pricing['1A'][meal_plan]
-                        print(f"Single adult price: {base_price}")
-                    elif a == 2:
-                        base_price = date_pricing['2A'][meal_plan]
-                        print(f"Double adult price: {base_price}")
-                    else:
-                        # For more than 2 adults, use 2A price as base and add extra adult price
-                        base_price = date_pricing['2A'][meal_plan]
-                        extra_adults = a - 2
-                        extra_price = extra_adults * date_pricing['EA'][meal_plan]
-                        base_price += extra_price
-                        print(f"Double adult base: {date_pricing['2A'][meal_plan]}")
-                        print(f"Extra adults ({extra_adults}) price: {extra_price}")
-                        print(f"Total base price: {base_price}")
-
-                    # Calculate children price
-                    paid_children = 0
-                    free_children = 0
-                    for age in c_ages:
-                        if age > free_child_age:
-                            paid_children += 1
-                        else:
-                            free_children += 1
-
-                    print(f"Paid children: {paid_children}, Free children: {free_children}")
-
-                    if paid_children > max_children:
-                        print("Too many paid children")
-                        valid = False
-                        break
-
-                    # Add price for paid children
-                    children_price = paid_children * date_pricing['EC'][meal_plan]
-                    print(f"Children price: {children_price}")
-                    
-                    # Calculate total price for this day
-                    daily_price = base_price + children_price
-                    print(f"Daily total: {daily_price}")
-                    
-                    # Add to room total
-                    room_price += daily_price
-
-                    daily_prices.append({
-                        'date': date_obj.strftime('%Y-%m-%d'),  # Convert back to string for JSON
-                        'base_price': base_price,
-                        'children_price': children_price,
-                        'total': daily_price,
-                        'adults': a,
-                        'paid_children': paid_children,
-                        'free_children': free_children
-                    })
-
-                if not valid:
-                    break
-
-                print(f"\nRoom {i+1} total price: {room_price}")
-                allocation.append({
-                    'adults': a,
-                    'children': c_ages,
-                    'paid_children': paid_children,
-                    'free_children': free_children,
-                    'room_price': room_price,
-                    'daily_prices': daily_prices,
-                    'nights': len(dates),
-                    'price_per_night': room_price / len(dates)
-                })
-                total_price += room_price
-
-            if valid:
-                print(f"\nValid allocation found with price: {total_price}")
-                best_price = total_price
-                best_allocation = allocation
-                # For multiple rooms, we don't need to find the cheapest option
-                if num_rooms > 1:
-                    break
+    if valid:
+        print(f"\nValid allocation found with price: {total_price}")
+        best_price = total_price
+        best_allocation = allocation
+    else:
+        best_price = None
+        best_allocation = None
 
     print("\n=== Finished allocate_rooms_and_calculate_price ===")
     print(f"Best price: {best_price}")
