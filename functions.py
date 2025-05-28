@@ -457,6 +457,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
                 grouped_hotels[hotel_key]['rooms'].append({
                     'room_type': room['room_type'],
                     'room_name': room['room_name'],
+                    'featured_photo': room.get('featured_photo', ''),
                     'meal_plans': meal_plan_results,
                     'allocation': meal_plan_results[list(meal_plan_results.keys())[0]]['allocation']
                 })
@@ -508,6 +509,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
                 r.max_children,
                 r.max_occupancy,
                 r.free_child_age_limit,
+                r.featured_photo,
                 p.date,
                 p.price_adult_1,
                 p.price_adult_2,
@@ -578,6 +580,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
                     'max_children': row.max_children,
                     'max_occupancy': row.max_occupancy,
                     'free_child_age': row.free_child_age_limit,
+                    'featured_photo': row.featured_photo,
                     'pricing': {}
                 }
 
