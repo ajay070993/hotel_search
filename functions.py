@@ -191,8 +191,15 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
 
             # Calculate base price based on number of adults
             if a == 1:
-                base_price = date_pricing['1A'][meal_plan]
-                print(f"Single adult price: {base_price}")
+                # Check if this is the special case of 1 adult + 1 paid child
+                paid_children = sum(1 for age in c_ages if age > free_child_age)
+                if paid_children == 1:
+                    # Special case: 1 adult + 1 paid child should be priced as 2 adults
+                    base_price = date_pricing['2A'][meal_plan]
+                    print(f"Special case: 1 adult + 1 paid child using 2A price: {base_price}")
+                else:
+                    base_price = date_pricing['1A'][meal_plan]
+                    print(f"Single adult price: {base_price}")
             elif a == 2:
                 base_price = date_pricing['2A'][meal_plan]
                 print(f"Double adult price: {base_price}")
@@ -222,9 +229,13 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
                 valid = False
                 break
 
-            # Add price for paid children
-            children_price = paid_children * date_pricing['EC'][meal_plan]
-            print(f"Children price: {children_price}")
+            # Add price for paid children, but skip if this is the 1A+1C case with paid child
+            if not (a == 1 and paid_children == 1):
+                children_price = paid_children * date_pricing['EC'][meal_plan]
+                print(f"Children price: {children_price}")
+            else:
+                children_price = 0
+                print("Skipping children price for 1A+1C case with paid child")
             
             # Calculate total price for this day
             daily_price = base_price + children_price
