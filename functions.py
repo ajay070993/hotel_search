@@ -335,11 +335,16 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
         if hotel_key not in grouped_hotels:
             grouped_hotels[hotel_key] = {
                 'hotel_id': hotel['hotel_id'],
+                'dist_hotel_id': hotel['dist_hotel_id'],
                 'hotel_name': hotel['hotel_name'],
-                'city': hotel.get('city_id', ''),
+                'description': hotel.get('description', ''),
+                'city_id': hotel.get('city_id', ''),
+                'city_name': hotel.get('city_name', ''),
                 'featured_photo': hotel.get('featured_photo', ''),
+                'hotel_type': hotel.get('hotel_type', ''),
                 'star_category': hotel.get('star_category', ''),
                 'address': hotel.get('address', ''),
+                'brand_name': hotel.get('brand_name', ''),
                 'check_in': check_in,
                 'check_out': check_out,
                 'nights': len(dates),
@@ -466,8 +471,13 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
             if meal_plan_results:
                 print(f"Adding room with {len(meal_plan_results)} valid meal plans")
                 grouped_hotels[hotel_key]['rooms'].append({
+                    'room_id': room['room_id'],
+                    'dist_room_id': room['dist_room_id'],
                     'room_type': room['room_type'],
                     'room_name': room['room_name'],
+                    'room_view': room.get('room_view', ''),
+                    'room_size': room.get('room_size', ''),
+                    'extra_bed': room.get('extra_bed', ''),
                     'featured_photo': room.get('featured_photo', ''),
                     'meal_plans': meal_plan_results,
                     'allocation': meal_plan_results[list(meal_plan_results.keys())[0]]['allocation']
@@ -508,14 +518,20 @@ def get_hotels_structured(city_id: Optional[str] = None,
             SELECT 
                 h.id AS hotel_id,
                 h.hotel_name,
+                h.description,
                 h.city_id,
+                mc.city as city_name,
                 h.featured_photo,
+                amhc.hotel_type as hotel_type,
                 h.star_category,
                 h.address,
                 dhl.id AS dist_hotel_id,
                 r.id AS room_id,
                 r.room_name,
                 r.room_type,
+                r.room_view,
+                r.room_size,
+                r.extra_bed,
                 r.max_adults,
                 r.max_children,
                 r.max_occupancy,
@@ -526,8 +542,13 @@ def get_hotels_structured(city_id: Optional[str] = None,
                 p.price_adult_2,
                 p.extra_adult,
                 p.extra_child,
-                p.meal_plan_id
+                p.meal_plan_id,
+                mb.brand_group AS brand_name,
+                rl.id AS dist_room_id
             FROM anh_hotels h
+            JOIN anh_master_city mc ON h.city_id = mc.id
+            JOIN anh_master_hotel_category amhc ON h.hotel_type_id = amhc.id
+            JOIN anh_master_brands_group mb ON h.brand_id = mb.id
             JOIN anh_distributor_hotels_list dhl ON h.id = dhl.hotel_id
             JOIN anh_hotel_rooms r ON h.id = r.hotel_id
             JOIN anh_distributor_rooms_list rl ON rl.dist_hotel_id = dhl.id
@@ -574,19 +595,29 @@ def get_hotels_structured(city_id: Optional[str] = None,
 
             if hotel_id not in hotels:
                 hotels[hotel_id] = {
-                    'hotel_id': row.dist_hotel_id,
+                    'hotel_id': row.hotel_id,
+                    'dist_hotel_id': row.dist_hotel_id,
                     'hotel_name': row.hotel_name,
+                    'description': row.description,
                     'city_id': row.city_id,
+                    'city_name': row.city_name,
                     'featured_photo': row.featured_photo,
+                    'hotel_type': row.hotel_type,
                     'star_category': row.star_category,
                     'address': row.address,
+                    'brand_name': row.brand_name,
                     'rooms': {}
                 }
 
             if room_id not in hotels[hotel_id]['rooms']:
                 hotels[hotel_id]['rooms'][room_id] = {
+                    'room_id': room_id,
+                    'dist_room_id': row.dist_room_id,
                     'room_name': row.room_name,
                     'room_type': row.room_type,
+                    'room_view': row.room_view,
+                    'room_size': row.room_size,
+                    'extra_bed': row.extra_bed,
                     'max_adults': row.max_adults,
                     'max_children': row.max_children,
                     'max_occupancy': row.max_occupancy,
