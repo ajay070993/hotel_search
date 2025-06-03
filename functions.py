@@ -352,6 +352,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_id: str,
                 'star_category': hotel.get('star_category', ''),
                 'address': hotel.get('address', ''),
                 'brand_name': hotel.get('brand_name', ''),
+                'brand_id': hotel.get('brand_id', ''),
                 'check_in': check_in,
                 'check_out': check_out,
                 'nights': len(dates),
@@ -619,6 +620,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
                     'star_category': row.star_category,
                     'address': row.address,
                     'brand_name': row.brand_name,
+                    'brand_id': row.brand_id,
                     'rooms': {}
                 }
 
