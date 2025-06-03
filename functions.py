@@ -8,10 +8,10 @@ from db_config import get_db
 
 # Map meal_plan_id to meal plan names
 MEAL_PLAN_MAP = {
-    1: 'normal',
-    2: 'with_breakfast',
-    3: 'with_map',
-    4: 'with_all'
+    1: 'Room Only',
+    2: 'Room with Breakfast',
+    3: 'Room with Breakfast and Lunch/Dinner',
+    4: 'Room with Breakfast, Lunch and Dinner'
 }
 
 def get_date_range(start: str, end: str) -> List[str]:
@@ -472,7 +472,12 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_id: str,
                 
                 if not allocation_result['error']:
                     print(f"Valid allocation found for {meal_plan}")
-                    meal_plan_results[meal_plan] = allocation_result
+                    meal_plan_results[str(meal_plan_id)] = {
+                        'id': meal_plan_id,
+                        'name': meal_plan,
+                        'price': allocation_result['price'],
+                        'allocation': allocation_result['allocation']
+                    }
                 else:
                     print(f"No valid allocation for {meal_plan}")
 
