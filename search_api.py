@@ -180,11 +180,11 @@ def search():
                 'rooms': rooms,
                 'children': children,
                 'childrenAges': children_ages,
-                'maxAdultsPerRoom': max_adults_per_room,
-                'maxChildrenPerRoom': max_children_per_room,
-                'maxOccupancyPerRoom': max_occupancy_per_room,
-                'minRoomsNeeded': min_rooms_needed,
-                'roomsToAllocate': rooms_to_allocate
+                # 'maxAdultsPerRoom': max_adults_per_room,
+                # 'maxChildrenPerRoom': max_children_per_room,
+                # 'maxOccupancyPerRoom': max_occupancy_per_room,
+                # 'minRoomsNeeded': min_rooms_needed,
+                # 'roomsToAllocate': rooms_to_allocate
             }
         }
     }

@@ -551,7 +551,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
             JOIN anh_master_brands_group mb ON h.brand_id = mb.id
             JOIN anh_distributor_hotels_list dhl ON h.id = dhl.hotel_id
             JOIN anh_hotel_rooms r ON h.id = r.hotel_id
-            JOIN anh_distributor_rooms_list rl ON rl.dist_hotel_id = dhl.id
+            JOIN anh_distributor_rooms_list rl ON rl.dist_hotel_id = dhl.id and rl.room_id = r.id
             JOIN anh_room_pricing p ON dhl.id = p.dist_hotel_id AND p.dist_room_id = rl.id
             WHERE h.is_active = 1 AND h.is_delete = 0
               AND r.is_active = 1 AND r.is_delete = 0
