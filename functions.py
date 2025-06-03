@@ -286,14 +286,14 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
         'allocation': best_allocation
     }
 
-def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str, 
+def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_id: str, 
                  adults: int, children_ages: List[int], check_in: str, 
                  check_out: str, rooms_required: int) -> List[Dict[str, Any]]:
     """Main search function."""
     print("\n=== Starting search_hotels ===")
     print(f"Search parameters:")
     print(f"City: {city}")
-    print(f"Hotel name: {hotel_name}")
+    print(f"Hotel ID: {hotel_id}")
     print(f"Adults: {adults}")
     print(f"Children ages: {children_ages}")
     print(f"Check-in: {check_in}")
@@ -321,9 +321,9 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_name: str,
             print(f"Skipping hotel - city mismatch: {hotel.get('city_id')} != {city}")
             continue
             
-        # Filter by hotel name if provided
-        if hotel_name and (not hotel.get('hotel_name') or hotel_name.lower() not in hotel['hotel_name'].lower()):
-            print(f"Skipping hotel - name mismatch: {hotel.get('hotel_name')} != {hotel_name}")
+        # Filter by hotel_id if provided
+        if hotel_id and str(hotel.get('hotel_id')) != str(hotel_id):
+            print(f"Skipping hotel - ID mismatch: {hotel.get('hotel_id')} != {hotel_id}")
             continue
 
         print("Hotel passed initial filters")
@@ -505,7 +505,7 @@ def matches_search(hotel: Dict[str, Any], search_key: str) -> bool:
     )
 
 def get_hotels_structured(city_id: Optional[str] = None, 
-                         hotel_name: Optional[str] = None,
+                         hotel_id: Optional[str] = None,
                          check_in: Optional[str] = None,
                          check_out: Optional[str] = None,
                          distributor_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -561,14 +561,14 @@ def get_hotels_structured(city_id: Optional[str] = None,
         
         params = {}
         
-        # Add filters - make city and hotel_name optional
+        # Add filters - make city and hotel_id optional
         if city_id:
             query += " AND dhl.city_id = :city_id"
             params['city_id'] = city_id
             
-        if hotel_name:
-            query += " AND h.hotel_name LIKE :hotel_name"
-            params['hotel_name'] = f"%{hotel_name}%"
+        if hotel_id:
+            query += " AND h.id = :hotel_id"
+            params['hotel_id'] = hotel_id
             
         if check_in and check_out:
             query += " AND p.date BETWEEN :check_in AND :check_out"
