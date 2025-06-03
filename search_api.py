@@ -67,10 +67,10 @@ def search():
         logger.debug(f"Children Ages: {children_ages}")
 
     # Validate required parameters - either city or hotel must be provided
-    if not city_id and not hotel_id:
+    if not city_id and not hotel_id and not brand_id:
         error_response = {
             'error': True,
-            'message': 'Either city or hotel must be provided'
+            'message': 'Either city or hotel or brand must be provided'
         }
         logger.error(f"Validation Error: {error_response}")
         return jsonify(error_response), 400
