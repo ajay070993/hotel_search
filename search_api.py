@@ -41,8 +41,9 @@ def search():
         logger.debug(f"Form Data: {data}")
 
     # Extract parameters with defaults
-    city = data.get('city', '')
-    hotel_name = data.get('hotel_name', '')
+    city_id = data.get('city_id', '')
+    hotel_id = data.get('hotel_id', '')
+    brand_id = data.get('brand_id', '')
     check_in = data.get('checkIn', datetime.now().strftime('%Y-%m-%d'))
     check_out = data.get('checkOut', (datetime.now().strftime('%Y-%m-%d')))
     adults = int(data.get('adults', 1))
@@ -51,8 +52,9 @@ def search():
     children_ages = []
 
     logger.debug(f"Extracted Parameters:")
-    logger.debug(f"City: {city}")
-    logger.debug(f"Hotel Name: {hotel_name}")
+    logger.debug(f"City ID: {city_id}")
+    logger.debug(f"Hotel ID: {hotel_id}")
+    logger.debug(f"Brand ID: {brand_id}")
     logger.debug(f"Check In: {check_in}")
     logger.debug(f"Check Out: {check_out}")
     logger.debug(f"Adults: {adults}")
@@ -64,11 +66,11 @@ def search():
         children_ages = [int(age) for age in data['childrenAges'] if age is not None and age != '']
         logger.debug(f"Children Ages: {children_ages}")
 
-    # Validate required parameters - either city or hotel_name must be provided
-    if not city and not hotel_name:
+    # Validate required parameters - either city or hotel must be provided
+    if not city_id and not hotel_id:
         error_response = {
             'error': True,
-            'message': 'Either city or hotel name must be provided'
+            'message': 'Either city or hotel must be provided'
         }
         logger.error(f"Validation Error: {error_response}")
         return jsonify(error_response), 400
@@ -83,7 +85,7 @@ def search():
 
     # Fetch hotels from DB
     logger.debug("Fetching hotels from database...")
-    hotels = get_hotels_structured(city, hotel_name, check_in, check_out)
+    hotels = get_hotels_structured(city_id, hotel_id, brand_id, check_in, check_out)
     logger.debug(f"Found {len(hotels)} hotels")
 
     if not hotels:
@@ -161,7 +163,7 @@ def search():
 
     # Perform search
     logger.debug("Performing hotel search...")
-    search_results = search_hotels(hotels, city, hotel_name, adults, children_ages, check_in, check_out, rooms_to_allocate)
+    search_results = search_hotels(hotels, city_id, hotel_id, brand_id, adults, children_ages, check_in, check_out, rooms_to_allocate)
     logger.debug(f"Found {len(search_results)} search results")
 
     # Prepare response
@@ -173,7 +175,9 @@ def search():
             'allocation': allocation,
             'valid': valid,
             'searchParams': {
-                'city': city,
+                'city_id': city_id,
+                'hotel_id': hotel_id,
+                'brand_id': brand_id,
                 'checkIn': check_in,
                 'checkOut': check_out,
                 'adults': adults,

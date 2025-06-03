@@ -287,13 +287,14 @@ def allocate_rooms_and_calculate_price(room: Dict[str, Any], adults: int,
     }
 
 def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_id: str, 
-                 adults: int, children_ages: List[int], check_in: str, 
-                 check_out: str, rooms_required: int) -> List[Dict[str, Any]]:
+                 brand_id: str, adults: int, children_ages: List[int], 
+                 check_in: str, check_out: str, rooms_required: int) -> List[Dict[str, Any]]:
     """Main search function."""
     print("\n=== Starting search_hotels ===")
     print(f"Search parameters:")
     print(f"City: {city}")
     print(f"Hotel ID: {hotel_id}")
+    print(f"Brand ID: {brand_id}")
     print(f"Adults: {adults}")
     print(f"Children ages: {children_ages}")
     print(f"Check-in: {check_in}")
@@ -315,6 +316,7 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_id: str,
         print(f"\nProcessing hotel: {hotel.get('hotel_name', 'Unknown')}")
         print(f"Hotel ID: {hotel.get('hotel_id', 'Unknown')}")
         print(f"City ID: {hotel.get('city_id', 'Unknown')}")
+        print(f"Brand ID: {hotel.get('brand_id', 'Unknown')}")
         
         # Filter by city if provided
         if city and (not hotel.get('city_id') or str(city).lower() not in str(hotel['city_id']).lower()):
@@ -324,6 +326,11 @@ def search_hotels(hotels: List[Dict[str, Any]], city: str, hotel_id: str,
         # Filter by hotel_id if provided
         if hotel_id and str(hotel.get('hotel_id')) != str(hotel_id):
             print(f"Skipping hotel - ID mismatch: {hotel.get('hotel_id')} != {hotel_id}")
+            continue
+
+        # Filter by brand_id if provided
+        if brand_id and str(hotel.get('brand_id')) != str(brand_id):
+            print(f"Skipping hotel - brand ID mismatch: {hotel.get('brand_id')} != {brand_id}")
             continue
 
         print("Hotel passed initial filters")
@@ -506,6 +513,7 @@ def matches_search(hotel: Dict[str, Any], search_key: str) -> bool:
 
 def get_hotels_structured(city_id: Optional[str] = None, 
                          hotel_id: Optional[str] = None,
+                         brand_id: Optional[str] = None,
                          check_in: Optional[str] = None,
                          check_out: Optional[str] = None,
                          distributor_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -544,6 +552,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
                 p.extra_child,
                 p.meal_plan_id,
                 mb.brand_group AS brand_name,
+                mb.id AS brand_id,
                 rl.id AS dist_room_id
             FROM anh_hotels h
             JOIN anh_master_city mc ON h.city_id = mc.id
@@ -561,7 +570,7 @@ def get_hotels_structured(city_id: Optional[str] = None,
         
         params = {}
         
-        # Add filters - make city and hotel_id optional
+        # Add filters - make city, hotel_id, and brand_id optional
         if city_id:
             query += " AND dhl.city_id = :city_id"
             params['city_id'] = city_id
@@ -569,6 +578,10 @@ def get_hotels_structured(city_id: Optional[str] = None,
         if hotel_id:
             query += " AND h.id = :hotel_id"
             params['hotel_id'] = hotel_id
+            
+        if brand_id:
+            query += " AND h.brand_id = :brand_id"
+            params['brand_id'] = brand_id
             
         if check_in and check_out:
             query += " AND p.date BETWEEN :check_in AND :check_out"
